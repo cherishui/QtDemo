@@ -1,0 +1,421 @@
+﻿#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include "MyButton.h"
+#include <QDebug>
+#include <QMessageBox>
+#include <QThread>
+#include <QMouseEvent>
+
+int g_event_count = 0;
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+
+    //setWindowFlags(windowFlags() | Qt::FramelessWindowHint);
+
+    // 设置背景颜色和圆角
+    // setStyleSheet(R"(
+    //     QMainWindow {
+    //         background-color: white;
+    //         border: 2px solid #cccccc;
+    //         border-radius: 15px;
+    //     }
+    // )");
+
+    qDebug() << ui->m_TopBottomSplitter->orientation();
+    qDebug() << ui->m_TopBottomSplitter->opaqueResize();
+    qDebug() << ui->m_TopBottomSplitter->handleWidth();
+    qDebug() << ui->m_TopBottomSplitter->childrenCollapsible();
+
+    qDebug() << ui->m_LeftRightSplitter;
+
+    qDebug() << "m_LeftRightSplitter->childrenCollapsible" << ui->m_LeftRightSplitter->childrenCollapsible();
+    //ui->m_LeftRightSplitter->setCollapsible(0, false);
+    //ui->m_LeftRightSplitter->setCollapsible(1, false);
+    //qDebug() << ui->m_LeftRightSplitter->isCollapsible(0);
+    ui->m_LeftRightSplitter->setChildrenCollapsible(false);
+    ui->m_LeftRightSplitter->setMinimumWidth(200);
+    ui->m_LeftRightSplitter->setHandleWidth(10);
+    ui->m_LeftRightSplitter->setOpaqueResize(true); // 实时预览调整效果
+
+    ui->m_LeftRightSplitter->setStyleSheet(
+        "QSplitter::handle {"
+        "    background-color: gray;"
+        "    border: 1px solid darkgray;"
+        "}"
+        );
+
+    // 开启鼠标跟踪
+    setMouseTracking(true);
+    ui->centralwidget->setMouseTracking(true);
+    ui->m_TopBottomSplitter->setMouseTracking(true);
+    ui->TopWidget->setMouseTracking(true);
+
+    // 启动 Hover 事件
+    setAttribute(Qt::WA_Hover);
+    installEventFilter(this);
+    // 确保中央部件也有Hover
+    ui->centralwidget->setAttribute(Qt::WA_Hover);
+    ui->centralwidget->installEventFilter(this);
+
+    Mybtn = new CMyButton(this);
+    Mybtn->setText("自定义按钮");
+    ui->m_LeftRightSplitter->addWidget(Mybtn);
+
+#if 0
+    // 窗口的默认上下文策略是 Qt::DefaultContextMenu
+    // 作用是在 窗口中按下鼠标右键, qt框架调用 QWidget::contextMenuEvent()
+    // 在这里面弹出 QMenu 菜单
+    setContextMenuPolicy(Qt::DefaultContextMenu);
+#endif
+
+#if 0
+    // 该窗口策略 禁用右键菜单
+    setContextMenuPolicy(Qt::NoContextMenu);
+#endif
+
+#if 0
+    // ActionsContextMenu 直接给窗口 addAction 增加右键菜单
+    setContextMenuPolicy(Qt::ActionsContextMenu);
+    // 给当前窗口添加QAction对象
+    QAction* act1  = new QAction("C++");
+    QAction* act2 = new QAction("Java");
+    QAction* act3  = new QAction("Python");
+    this->addAction(act1);
+    this->addAction(act2);
+    this->addAction(act3);
+    connect(act1, &QAction::triggered, this, [=]()
+            {
+                QMessageBox::information(this, "title", "您选择的是C++...");
+            });
+#endif
+
+
+#if 1
+    // 策略 Qt::CustomContextMenu
+    // 当在窗口中点击鼠标右键, 窗口会发出一个信号: QWidget::customContextMenuRequested()
+    // 对应发射出的这个信号, 需要添加一个槽函数, 用来显示右键菜单
+    this->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this, &MainWindow::customContextMenuRequested, this, [=](const QPoint &pos)
+            {
+                // 参数 pos 是鼠标按下的位置, 但是不能直接使用, 这个坐标不是屏幕坐标, 是当前窗口的坐标
+                // 如果要使用这个坐标需要将其转换为屏幕坐标
+                QMenu menu;
+                QAction* act = menu.addAction("C++");
+                connect(act, &QAction::triggered, this, [=]()
+                        {
+                            QMessageBox::information(this, "title", "您选择的是C++...");
+                        });
+                menu.addAction("Java");
+                menu.addAction("Python");
+                // menu.exec(QCursor::pos());
+                // 将窗口坐标转换为屏幕坐标
+                QPoint newpt = this->mapToGlobal(pos);
+                menu.exec(newpt);
+            });
+#endif
+
+    //Qt::ContextMenuPolicy menuPolicy = contextMenuPolicy();
+    //qDebug() << menuPolicy;
+}
+
+MainWindow::~MainWindow()
+{
+    qDebug() << "MainWindow 析构开始";
+
+    // 先停止线程（这会断开信号槽并 delete 对象）
+    stopWorkThread();
+
+    // 确保指针确实为 null（防御性编程）
+    Q_ASSERT(m_worker == nullptr);
+    Q_ASSERT(m_workerThread == nullptr);
+
+    delete ui;
+    qDebug() << "MainWindow 析构完成";
+}
+
+
+// 【关键】拦截窗口关闭事件，先安全停止线程
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    qDebug() << "正在关闭窗口，检查线程状态...";
+
+    stopWorkThread();
+
+    QMainWindow::closeEvent(event);
+}
+
+// 安全停止线程的封装函数
+void MainWindow::stopWorkThread()
+{
+    if (!m_workerThread) return;
+
+    if (m_workerThread->isRunning()) {
+        m_isClosing = true;
+        qDebug() << "请求线程中断...";
+
+        // 通知 worker 和线程退出
+        if (m_worker) {
+            emit m_worker->stopRequested();
+        }
+        m_workerThread->requestInterruption();
+        m_workerThread->quit();  // 必须调用，让事件循环处理 deleteLater
+    }
+
+    // 等待线程结束（非阻塞式检查）
+    if (m_workerThread->isRunning()) {
+        if (!m_workerThread->wait(3000)) {
+            qWarning() << "线程未能优雅退出，强制终止";
+            m_workerThread->terminate();
+            m_workerThread->wait(1000);
+        }
+    }
+
+    // 手动清理资源
+    // 【关键】先断开所有信号槽连接，防止野指针访问！
+    if (m_worker) {
+        m_worker->disconnect();  // 断开 worker 的所有信号槽
+        delete m_worker;
+        m_worker = nullptr;
+    }
+    if (m_workerThread) {
+        m_workerThread->disconnect();  // 断开线程的所有信号槽
+        delete m_workerThread;
+        m_workerThread = nullptr;
+    }
+
+    qDebug() << "线程资源已清理";
+}
+
+void MainWindow::contextMenuEvent(QContextMenuEvent *event)
+{
+    Q_UNUSED(event);
+
+    // 弹出一个菜单, 菜单项是 QAction 类型
+    QMenu menu;
+    QAction* act = menu.addAction("C++");
+    connect(act, &QAction::triggered, this, [=]()
+            {
+                QMessageBox::information(this, "title", "您选择的是C++...");
+            });
+    menu.addAction("Java");
+    menu.addAction("Python");
+    menu.exec(QCursor::pos());	// 右键菜单被模态显示出来了
+}
+
+void MainWindow::mouseMoveEvent(QMouseEvent *event)
+{
+    qDebug() << "MainWindow::mouseMoveEvent" << g_event_count++ <<event;
+    QMainWindow::mouseMoveEvent(event);
+}
+
+void MainWindow::mousePressEvent(QMouseEvent *event)
+{
+    qDebug() << "MainWindow 收到来自按钮的事件";
+    event->accept();
+
+    qDebug() << "MainWindow::mousePressEvent" << g_event_count++ <<event << event->isAccepted();
+    QMainWindow::mousePressEvent(event);
+}
+
+#include <QHoverEvent>
+#include <QObject>
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    // 只处理发往this的事件，避免递归
+    if (obj != this) {
+        return QMainWindow::eventFilter(obj, event);
+    }
+
+    switch (event->type()) {
+    case QEvent::HoverEnter:
+        hoverEnterEvent(static_cast<QHoverEvent*>(event));
+        return false;  // 继续传递，不要拦截
+
+    case QEvent::HoverLeave:
+        hoverLeaveEvent(static_cast<QHoverEvent*>(event));
+        return false;
+
+    case QEvent::HoverMove:
+        hoverMoveEvent(static_cast<QHoverEvent*>(event));
+        return false;  // 返回false让事件继续传递
+
+    default:
+        return QMainWindow::eventFilter(obj, event);
+    }
+}
+
+// ========== HoverMove 处理 ==========
+void MainWindow::hoverMoveEvent(QHoverEvent *event)
+{
+    QPoint pos = event->pos();
+    //qDebug() << "HoverMove 悬停移动:" << pos;
+
+    setToolTip(QString("坐标: (%1, %2)").arg(pos.x()).arg(pos.y()));
+
+    event->accept();
+    //QMainWindow::hoverMoveEvent(event);
+}
+
+// 可选：进入/离开事件（常与Hover配套使用）
+void MainWindow::hoverEnterEvent(QHoverEvent *event)  {
+    qDebug() << "HoverEnter 鼠标进入主窗口";
+    setCursor(Qt::CrossCursor);
+
+    // 【关键】接受事件
+    event->accept();
+
+    // 调用基类（重要！）
+    //QMainWindow::hoverEnterEvent(event);
+}
+
+void MainWindow::hoverLeaveEvent(QHoverEvent *event) {
+    qDebug() << "HoverLeave 鼠标离开主窗口";
+    unsetCursor();
+
+    event->accept();
+    //QMainWindow::hoverLeaveEvent(event);
+}
+
+
+QString func1()
+{
+    //msleep(10000); // 模拟工作
+    qDebug()<<"我是func2函数";
+    return "123";
+}
+
+QString func2(QString name)
+{
+    qDebug() << name << "from" << QThread::currentThread();
+    return "";
+}
+
+#include <iostream>
+class A
+{
+public:
+    A()
+    {
+        qDebug() << "Running in thread:" << QThread::currentThreadId();
+        std::cout << "我是 A 的构造函数" << std::endl;
+    };
+
+    QString m_func(QString name)
+    {
+        qDebug() << "Running in thread:" << QThread::currentThreadId();
+        m_name = name;
+        std::cout << "我是 A 的成员函数" << std::endl;
+        return "";
+    }
+    QString m_name;
+};
+
+#include <QtConcurrent>
+void MainWindow::on_pushButton_clicked()
+{
+#if 0
+    QFuture<QString> fut1 = QtConcurrent::run(func1);// 1.用QFuture获取该函数的运行结果
+    //QFuture<QString> fut2 = QtConcurrent::run(func2, QString("Thread 1"));//2.参数2：向func函数传递的参数
+    QString result1 = fut1.result();
+    //QString result2 = fut2.result();
+    qDebug() << "1. result1" << result1;
+    fut1.waitForFinished();
+    result1 = fut1.result();
+    qDebug() << "2. result1" << result1;
+    //fut2.waitForFinished();
+#endif
+
+#if 0
+    QByteArray bytearray = "hello world";
+    A *a = new A();
+    // 1.调用QByteArray的常量成员函数split(),传递常量引用，bytearray
+    QFuture<QList<QByteArray>> fut2 = QtConcurrent::run(bytearray,&QByteArray::split,',');
+
+    //2.非常量成员函数运行在一个新的线程，传递指针
+     QFuture<QString> fut3 = QtConcurrent::run(a,&A::m_func, QString("Thread 2"));
+
+    QList<QByteArray> result2 = fut2.result();
+    QString result3 = fut3.result();
+
+    fut2.waitForFinished();
+    fut3.waitForFinished();
+
+    // // 开始线程
+    // thread.start();
+
+    // // 等待线程结束
+    // thread.wait();
+#endif        
+    // 如果已有线程在运行，先停止
+    if (m_workerThread && m_workerThread->isRunning()) {
+        QMessageBox::warning(this, "警告", "线程已在运行中！");
+        return;
+    }
+
+    // 清理旧对象（如果存在）
+    // 清理旧对象
+    stopWorkThread();
+
+    // 基于 QObject 创建一个工作者类
+    // 新建一个 QThread 和 上面的工作线程类，调用 QObject::moveToThread
+    // 将工作者移动到线程运行
+    m_workerThread = new QThread(); // 都不设置parent，手动管理
+    m_worker = new WorkThread(); // 工作者类不指定父对象，通过信号槽自动删除
+    m_worker->moveToThread(m_workerThread);  // 移动到线程
+
+    // 先调用 moveToThread，后调用 connect 连接，这个时候不需要指明第五个参数
+    // 如果 先调用 connect ，后再调用 moveToThread ，这会表示 DirectConnection，逻辑错误。
+    // 推荐写法：依赖 AutoConnection，但确保 moveToThread 在 connect 之前
+    // 【关键】只使用 DirectConnection 或 QueuedConnection，避免 AutoConnection 歧义
+    connect(m_workerThread, &QThread::started,
+            m_worker, &WorkThread::doWork,
+            Qt::QueuedConnection);
+
+    // 工作完成 -> 线程退出（QueuedConnection 确保跨线程安全）
+    connect(m_worker, &WorkThread::workFinished,
+            m_workerThread, &QThread::quit,
+            Qt::QueuedConnection);
+
+    // 5. 启动
+    m_workerThread->start();
+}
+
+void MainWindow::on_pushButton_2_clicked()
+{
+
+}
+
+
+void MainWindow::on_pushButton_3_clicked()
+{
+
+}
+
+
+WorkThread::~WorkThread() {
+    qDebug() << "WorkThread 销毁";
+}
+
+void WorkThread::doWork()
+{
+    for (int i = 0; i < 100; i++) {
+        if (QThread::currentThread()->isInterruptionRequested() ||
+            QThread::currentThread()->isFinished()) {
+            qDebug() << "线程被要求退出...";
+            break;
+        }
+
+        qDebug() << "start thread run:" << i;
+
+        QThread::msleep(100);  // 100ms 检查一次，响应更快
+
+        qDebug() << "end thread run:" << i;
+    }
+
+    qDebug() << "before thread workFinished:";
+    emit workFinished();
+    qDebug() << "after thread workFinished:";
+}
