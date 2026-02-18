@@ -15,22 +15,7 @@ class MainWindow;
 QT_END_NAMESPACE
 
 class CMyButton;
-
-class WorkThread : public QObject
-{
-    Q_OBJECT
-public:
-    explicit WorkThread(QObject* parent = nullptr)
-        : QObject(parent)
-    {}
-
-    ~WorkThread();
-public slots:
-    void doWork();
-signals:
-    void stopRequested();
-    void workFinished();
-};
+class MyThread;
 
 class MainWindow : public QMainWindow
 {
@@ -60,18 +45,10 @@ private slots:
 
     void on_pushButton_3_clicked();
 
-    void stopWorkThread();
-
-
 private:
     Ui::MainWindow *ui;
     CMyButton*  Mybtn = nullptr;
 
-    // 线程相关成员
-    QThread* m_workerThread = nullptr;  // 使用成员变量便于管理
-    WorkThread* m_worker = nullptr;
-    bool m_isClosing = false;  // 标记是否正在关闭
-
-
+    MyThread*  pWorkThread = nullptr;
 };
 #endif // MAINWINDOW_H

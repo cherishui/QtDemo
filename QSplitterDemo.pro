@@ -28,11 +28,13 @@ gcc {
 
 SOURCES += \
     MyButton.cpp \
+    WorkThread.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
     MyButton.h \
+    WorkThread.h \
     mainwindow.h
 
 FORMS += \
