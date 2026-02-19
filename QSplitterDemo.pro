@@ -1,6 +1,7 @@
 QT       += core gui
 
 QT += concurrent
+QT += printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -8,6 +9,9 @@ CONFIG += c++17
 
 QMAKE_PROJECT_DEPTH = 0
 
+CONFIG += console
+
+message(CONFIG: $$CONFIG)
 
 # MSVC 统一配置
 msvc {

@@ -77,6 +77,8 @@ int main(int argc, char *argv[])
     // 安装自定义处理器（关键！）
     qInstallMessageHandler(utf8MessageHandler);
 
+    QApplication::setAttribute(Qt::AA_NativeWindows);  // 【关键】全局属性
+
     QApplication a(argc, argv);
 
     qDebug() << "=== 编码诊断 ===";

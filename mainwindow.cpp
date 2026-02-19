@@ -6,6 +6,9 @@
 #include <QMessageBox>
 #include <QThread>
 #include <QMouseEvent>
+#include <QPrinter>
+#include <QPrintDialog>
+#include <QPainter>
 
 #include "workthread.h"
 
@@ -310,12 +313,33 @@ void MainWindow::on_pushButton_clicked()
 
 void MainWindow::on_pushButton_2_clicked()
 {
-
+    ui->label->setText(ui->label->text() + "1");
 }
 
 
 void MainWindow::on_pushButton_3_clicked()
 {
+    // 创建文本编辑框
+    QTextEdit textEdit;
+    textEdit.setPlainText("这是要打印的文本内容。");
+
+    // 创建打印机对象
+    QPrinter printer;
+
+    // 创建打印对话框并关联打印机对象
+    QPrintDialog dialog(&printer);
+
+    // 设置打印对话框的选项
+    dialog.setOption(QPrintDialog::PrintSelection, true);
+
+    // 显示打印对话框并等待用户操作
+    if (dialog.exec() == QDialog::Accepted) {
+        // 用户点击了打印按钮，执行打印操作
+        // QPainter painter;
+        // painter.begin(&printer);
+        // textEdit.print(&painter);
+        // painter.end();
+    }
 
 }
 
