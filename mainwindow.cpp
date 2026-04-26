@@ -125,6 +125,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     //Qt::ContextMenuPolicy menuPolicy = contextMenuPolicy();
     //qDebug() << menuPolicy;
+
+    ui->comboBox->addItem("中国");
+    ui->comboBox->addItem("美国");
+    ui->comboBox->addItem("意大利");
+    ui->comboBox->setCurrentIndex(0);
 }
 
 MainWindow::~MainWindow()

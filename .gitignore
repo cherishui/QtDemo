@@ -60,10 +60,15 @@ CMakeLists.txt.user*
 *.opensdf
 *.vcxproj
 *vcxproj.*
+*.qtvscr
+*.slnx
 
 # MinGW generated files
 *.Debug
 *.Release
+debug/
+release
+.vs/
 
 # Python byte code
 *.pyc

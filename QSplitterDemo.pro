@@ -20,6 +20,24 @@ msvc {
     # 关键：Debug 模式也强制使用多线程 DLL（/MDd 默认可能有问题）
     QMAKE_CXXFLAGS_DEBUG -= /MTd
     QMAKE_CXXFLAGS_DEBUG += /MDd
+
+# 使用 Edit and Continue 调试信息
+      QMAKE_CXXFLAGS_DEBUG += /ZI
+      QMAKE_CFLAGS_DEBUG += /ZI
+
+      # 去掉普通调试信息
+      QMAKE_CXXFLAGS_DEBUG -= /Zi
+      QMAKE_CFLAGS_DEBUG -= /Zi
+
+      # 禁止优化
+      QMAKE_CXXFLAGS_DEBUG += /Od
+      QMAKE_CFLAGS_DEBUG += /Od
+
+      # 启用增量链接
+      QMAKE_LFLAGS_DEBUG += /INCREMENTAL /DEBUG
+
+      # 去掉冲突设置
+      QMAKE_LFLAGS_DEBUG -= /SAFESEH
 }
 
 # MinGW 统一配置
@@ -33,6 +51,7 @@ gcc {
 SOURCES += \
     MyButton.cpp \
     WorkThread.cpp \
+    cmycombox.cpp \
     cmydateedit.cpp \
     main.cpp \
     mainwindow.cpp
@@ -40,6 +59,7 @@ SOURCES += \
 HEADERS += \
     MyButton.h \
     WorkThread.h \
+    cmycombox.h \
     cmydateedit.h \
     mainwindow.h
 
