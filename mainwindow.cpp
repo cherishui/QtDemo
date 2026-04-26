@@ -342,44 +342,8 @@ void MainWindow::on_pushButton_3_clicked()
     }
 }
 
-#include "qtestscrollarea.h"
-#include "ScrollBarStyleGenerator.h"
 void MainWindow::on_pushButton_4_clicked()
 {
-    QTestScrollArea test(this);  // 传入父窗口
-    test.setWindowModality(Qt::ApplicationModal);
-    test.resize(400,300);
 
-    ScrollBarStyleGenerator generator;
-
-    // 设置颜色（支持透明度和各种状态）
-    generator.setBackgroundColor(QColor(45, 45, 48));           // 深灰背景
-    generator.setHandleColor(QColor(100, 100, 100));              // 滑块正常
-    generator.setHandleHoverColor(QColor(130, 130, 130));         // 滑块悬停
-    generator.setHandlePressedColor(QColor(160, 160, 160));     // 滑块按下
-    generator.setHandleDisabledColor(QColor(60, 60, 60, 128));    // 滑块禁用（半透明）
-
-    generator.setArrowColor(QColor(200, 200, 200));                 // 箭头正常
-    generator.setArrowHoverColor(QColor(255, 255, 255));          // 箭头悬停
-    generator.setArrowPressedColor(QColor(150, 150, 150));        // 箭头按下
-    generator.setArrowDisabledColor(QColor(100, 100, 100, 100));  // 箭头禁用
-
-    generator.setSubPageColor(QColor(60, 60, 60));                // 滑块上方
-    generator.setAddPageColor(QColor(60, 60, 60));                // 滑块下方
-
-    // 设置尺寸
-    generator.setScrollBarWidth(24);      // 滚动条宽度
-    generator.setHandleMinLength(40);     // 滑块最小高度
-    generator.setArrowSize(14);           // 箭头按钮大小
-    generator.setBorderRadius(7);       // 圆角半径
-
-    // 应用样式
-    generator.applyToWidget(&test);
-
-    // 或者获取QSS字符串用于调试
-    QString qss = generator.generateStyleSheet();
-    qDebug() << "Generated QSS:" << qss;
-
-    test.exec();  // 或使用 show() + 模态设置
 }
 

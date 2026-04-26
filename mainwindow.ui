@@ -42,7 +42,7 @@
        <property name="tabletTracking">
         <bool>false</bool>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,1">
+       <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,1">
         <item>
          <widget class="QPushButton" name="pushButton_4">
           <property name="sizePolicy">
@@ -67,6 +67,19 @@
            <string>PushButto1sdlfjsdff</string>
           </property>
          </widget>
+        </item>
+        <item>
+         <widget class="CMyDateEdit" name="dateEdit">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox"/>
         </item>
         <item>
          <widget class="QLabel" name="label">
@@ -166,12 +179,19 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CMyDateEdit</class>
+   <extends>QDateEdit</extends>
+   <header location="global">cmydateedit.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

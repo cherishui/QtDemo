@@ -32,22 +32,19 @@ gcc {
 
 SOURCES += \
     MyButton.cpp \
-    ScrollBarStyleGenerator.cpp \
     WorkThread.cpp \
+    cmydateedit.cpp \
     main.cpp \
-    mainwindow.cpp \
-    qtestscrollarea.cpp
+    mainwindow.cpp
 
 HEADERS += \
     MyButton.h \
-    ScrollBarStyleGenerator.h \
     WorkThread.h \
-    mainwindow.h \
-    qtestscrollarea.h
+    cmydateedit.h \
+    mainwindow.h
 
 FORMS += \
-    mainwindow.ui \
-    qtestscrollarea.ui
+    mainwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
